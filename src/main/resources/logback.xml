@@ -1,0 +1,43 @@
+<?xml version="1.0" ?>
+<configuration>
+
+    <property name="defaultPattern" value="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n"/>
+
+    <timestamp key="timestamp" datePattern="yyyy_MM_dd"/>
+
+    <appender name="ASYNC_AWS_LOGS" class="ca.pjer.logback.AwsLogsAppender">
+
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ALL</level>
+        </filter>
+
+        <layout>
+            <pattern>${defaultPattern}</pattern>
+        </layout>
+
+        <logGroupName>s3_performance_test</logGroupName>
+        <logStreamName>test_1</logStreamName>
+
+        <maxBatchLogEvents>10</maxBatchLogEvents>
+        <maxFlushTimeMillis>5000</maxFlushTimeMillis>
+        <maxBlockTimeMillis>3000</maxBlockTimeMillis>
+        <retentionTimeDays>30</retentionTimeDays>
+    </appender>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${defaultPattern}</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.s3_test" additivity="false">
+        <level value="INFO"/>
+        <appender-ref ref="ASYNC_AWS_LOGS"/>
+        <!--    <appender-ref ref="STDOUT"/>-->
+    </logger>
+
+    <root level="INFO">
+        <appender-ref ref="ASYNC_AWS_LOGS"/>
+        <!--    <appender-ref ref="STDOUT"/>-->
+    </root>
+</configuration>
