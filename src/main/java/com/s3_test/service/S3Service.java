@@ -1,58 +1,49 @@
 package com.s3_test.service;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 public class S3Service {
 
     private static final Logger log = LoggerFactory.getLogger(S3Service.class);
 
-    private final AmazonS3 amazonS3;
+    private final S3Client s3Client;
 
-    public S3Service(AmazonS3 amazonS3) {
-        this.amazonS3 = amazonS3;
+    public S3Service(S3Client s3Client) {
+        this.s3Client = s3Client;
     }
 
     public void deleteDirectory(String bucketName, String prefix) {
 
+        int deletedObjects = 0;
+
         try {
-            List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
+            ListObjectsV2Request listObjectsV2Request = ListObjectsV2Request.builder()
+                    .bucket(bucketName)
+                    .prefix(prefix)
+                    .build();
 
-            ListObjectsV2Request request = new ListObjectsV2Request()
-                    .withBucketName(bucketName)
-                    .withPrefix(prefix);
-
-            ListObjectsV2Result result;
+            ListObjectsV2Response response;
 
             do {
-                result = amazonS3.listObjectsV2(request);
-                for (S3ObjectSummary objectSummary : result.getObjectSummaries()) {
-                    keysToDelete.add(new DeleteObjectsRequest.KeyVersion(objectSummary.getKey()));
+                response = s3Client.listObjectsV2(listObjectsV2Request);
+                for (S3Object s3Object : response.contents()) {
+                    DeleteObjectRequest request = DeleteObjectRequest.builder()
+                            .bucket(bucketName)
+                            .key(s3Object.key())
+                            .build();
+                    s3Client.deleteObject(request);
+                    deletedObjects++;
                 }
-                request.setContinuationToken(result.getNextContinuationToken());
-            } while (result.isTruncated());
 
-            if (!keysToDelete.isEmpty()) {
-                DeleteObjectsRequest multiObjectDeleteRequest = new DeleteObjectsRequest(bucketName)
-                        .withKeys(keysToDelete)
-                        .withQuiet(false);
+            } while (response.isTruncated());
 
-                DeleteObjectsResult deleteObjectsResult = amazonS3.deleteObjects(multiObjectDeleteRequest);
-
-                int successfulDeletes = deleteObjectsResult.getDeletedObjects().size();
-
-                if (successfulDeletes != keysToDelete.size()) {
-                    throw new RuntimeException(String.format("Not all keys deleted, had to delete: %d, deleted: %d",
-                            keysToDelete.size(), successfulDeletes));
-                }
-            }
-
-            log.info(String.format("Deleted %d objects in %s s3 path", keysToDelete.size(), prefix));
+            log.info(String.format("Deleted %d objects in %s s3 path", deletedObjects, prefix));
         } catch (Exception ex) {
             log.warn(String.format("Directory %s wasn't deleted", prefix));
         }

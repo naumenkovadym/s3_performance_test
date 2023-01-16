@@ -1,13 +1,18 @@
 package com.s3_test;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 import com.s3_test.model.FileUploadResult;
 import com.s3_test.service.S3Service;
 import com.s3_test.task.UploadFileTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.S3Client;
 
+import java.io.IOException;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -15,13 +20,12 @@ import java.util.concurrent.*;
 
 public class Main {
 
-    private static final Logger log = LoggerFactory.getLogger(S3Service.class);
+    private static final Logger log = LoggerFactory.getLogger(Main.class);
 
     private static final int NUMBER_OF_FILES = 50;
     private static final int FILE_SIZE_MB = 50 * 1024 * 1024;
     public static final long UPLOAD_FILE_TIMEOUT_MIN = 5L;
 
-    private final AmazonS3 amazonS3;
     private final S3Service s3Service;
     private final String outputBucket;
     private final String outputPrefix;
@@ -29,30 +33,38 @@ public class Main {
     public Main(String outputBucket, String outputPrefix) {
         this.outputBucket = outputBucket;
         this.outputPrefix = outputPrefix;
-        this.amazonS3 = AmazonS3ClientBuilder.standard().build();
-        this.s3Service = new S3Service(amazonS3);
+        S3Client s3Client = S3Client.builder().build();
+        this.s3Service = new S3Service(s3Client);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         log.info("Test application started");
         Main main = new Main(args[1], args[2]);
-        List<byte[]> filesContent = main.createMockFiles();
-        main.testS3(filesContent, Long.parseLong(args[0]));
+        List<Path> testFilePaths = main.createMockFiles();
+        main.testS3(testFilePaths, Long.parseLong(args[0]));
     }
 
-    private List<byte[]> createMockFiles() {
-        List<byte[]> resultList = new ArrayList<>();
+    private List<Path> createMockFiles() throws IOException {
+        FileSystem fs = Jimfs.newFileSystem(Configuration.unix());
+        Path foo = fs.getPath("/s3_test_files");
+        Files.createDirectory(foo);
+
+        List<Path> testFilePaths = new ArrayList<>();
 
         for (int i = 0; i < NUMBER_OF_FILES; i++) {
             byte[] bytes = new byte[FILE_SIZE_MB];
             new Random().nextBytes(bytes);
-            resultList.add(bytes);
+
+            Path filePath = foo.resolve("file_" + i);
+            Files.write(filePath, bytes);
+
+            testFilePaths.add(filePath);
         }
 
-        return resultList;
+        return testFilePaths;
     }
 
-    private void testS3(List<byte[]> filesContent, long timeLimitSec) {
+    private void testS3(List<Path> testFilePaths, long timeLimitSec) {
         List<FileUploadResult> fileUploadResults = new ArrayList<>();
 
         int iterationNum = 0;
@@ -60,11 +72,10 @@ public class Main {
         ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
         while (true) {
-            for (int i = 0; i < filesContent.size(); i++) {
+            for (int i = 0; i < testFilePaths.size(); i++) {
                 String fileName = "test_file_" + i;
                 Future<Long> futureUploadMillis = executorService.submit(
-                        new UploadFileTask(amazonS3, filesContent.get(i), fileName, iterationNum,
-                                outputBucket, outputPrefix));
+                        new UploadFileTask(testFilePaths.get(i), fileName, outputBucket, outputPrefix));
                 fileUploadResults.add(new FileUploadResult(fileName, futureUploadMillis, iterationNum));
             }
             checkRunningTime(fileUploadResults, timeLimitSec);

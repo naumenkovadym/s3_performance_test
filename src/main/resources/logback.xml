@@ -33,11 +33,11 @@
     <logger name="com.s3_test" additivity="false">
         <level value="INFO"/>
         <appender-ref ref="ASYNC_AWS_LOGS"/>
-        <!--    <appender-ref ref="STDOUT"/>-->
+<!--            <appender-ref ref="STDOUT"/>-->
     </logger>
 
     <root level="INFO">
         <appender-ref ref="ASYNC_AWS_LOGS"/>
-        <!--    <appender-ref ref="STDOUT"/>-->
+<!--            <appender-ref ref="STDOUT"/>-->
     </root>
 </configuration>
