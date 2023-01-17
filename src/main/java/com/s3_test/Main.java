@@ -28,7 +28,7 @@ public class Main {
 
     private static final int NUMBER_OF_FILES = 50;
     private static final int FILE_SIZE_MB = 50 * 1024 * 1024;
-    public static final long UPLOAD_FILE_TIMEOUT_MIN = 5L;
+    private static final long UPLOAD_FILE_TIMEOUT_MIN = 5L;
 
     private final S3Service s3Service;
     private final String outputBucket;
