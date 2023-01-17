@@ -12,12 +12,8 @@ repositories {
 }
 
 dependencies {
-    def awsSdkVersion = '2.19.17'
-    compile group: 'software.amazon.awssdk', name: 's3-transfer-manager', version: awsSdkVersion
-    compile group: 'software.amazon.awssdk.crt', name: 'aws-crt', version: '0.21.1'
-
-    compile group: 'com.google.jimfs', name: 'jimfs', version: '1.2'
-
+    def awsSdkVersion = '1.12.376'
+    compile group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: awsSdkVersion
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
     compile group: 'ch.qos.logback', name: 'logback-core', version: '1.2.3'
     compile group: 'ca.pjer', name: 'logback-awslogs-appender', version: '1.3.0'

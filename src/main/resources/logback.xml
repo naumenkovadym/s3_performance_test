@@ -16,7 +16,7 @@
         </layout>
 
         <logGroupName>s3_performance_test</logGroupName>
-        <logStreamName>test_1</logStreamName>
+        <logStreamName>test_2</logStreamName>
 
         <maxBatchLogEvents>10</maxBatchLogEvents>
         <maxFlushTimeMillis>5000</maxFlushTimeMillis>
