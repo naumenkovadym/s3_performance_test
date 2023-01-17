@@ -1,14 +1,11 @@
 package com.s3_test.task;
 
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.FileUpload;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
-
-import static software.amazon.awssdk.transfer.s3.SizeConstant.MB;
 
 public class UploadFileTask implements Callable<Long> {
 
