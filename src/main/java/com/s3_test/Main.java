@@ -7,7 +7,9 @@ import com.s3_test.service.S3Service;
 import com.s3_test.task.UploadFileTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
@@ -17,6 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.*;
+
+import static software.amazon.awssdk.transfer.s3.SizeConstant.MB;
 
 public class Main {
 
@@ -29,12 +33,23 @@ public class Main {
     private final S3Service s3Service;
     private final String outputBucket;
     private final String outputPrefix;
+    private final S3TransferManager transferManager;
 
     public Main(String outputBucket, String outputPrefix) {
         this.outputBucket = outputBucket;
         this.outputPrefix = outputPrefix;
         S3Client s3Client = S3Client.builder().build();
         this.s3Service = new S3Service(s3Client);
+
+        S3AsyncClient s3AsyncClient =
+                S3AsyncClient.crtBuilder()
+                        .minimumPartSizeInBytes(5 * MB)
+                        .build();
+
+        //if I create it in the UploadFileTask, I get AWS_ERROR_PRIORITY_QUEUE_EMPTY after 18 iterations
+        this.transferManager = S3TransferManager.builder()
+                .s3Client(s3AsyncClient)
+                .build();
     }
 
     public static void main(String[] args) throws IOException {
@@ -75,7 +90,7 @@ public class Main {
             for (int i = 0; i < testFilePaths.size(); i++) {
                 String fileName = "test_file_" + i;
                 Future<Long> futureUploadMillis = executorService.submit(
-                        new UploadFileTask(testFilePaths.get(i), fileName, outputBucket, outputPrefix));
+                        new UploadFileTask(transferManager, testFilePaths.get(i), fileName, outputBucket, outputPrefix));
                 fileUploadResults.add(new FileUploadResult(fileName, futureUploadMillis, iterationNum));
             }
             checkRunningTime(fileUploadResults, timeLimitSec);
